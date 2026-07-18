@@ -1,6 +1,8 @@
-# Backdoor Scanner
+# Kingx's FiveM Backdoor Scanner 
 
 A Windows desktop tool that scans a FiveM `resources` folder for obfuscated JavaScript backdoors and quarantines or deletes them. Built by Kingx Development.
+
+Preview: https://r2.fivemanage.com/58qkK59hC79ASv9tEou05/2026-07-1722-54-52.mp4
 
 ## Why
 

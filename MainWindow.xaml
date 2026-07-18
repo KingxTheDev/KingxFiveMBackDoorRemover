@@ -1,0 +1,88 @@
+<Window x:Class="BackdoorScanner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Kingx Development - Backdoor Scanner" Height="640" Width="960"
+        Icon="ico/icon.ico">
+
+    <DockPanel Margin="8">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,6,4,0" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Right" Text="Built by Kingx Development" Foreground="Gray" FontSize="11"/>
+        </DockPanel>
+
+        <TabControl>
+        <TabItem Header="Scan">
+            <StackPanel Margin="10">
+                <TextBlock Text="Scan for Backdoors" FontSize="16" FontWeight="Bold"/>
+                <TextBlock Text="Recursively scans every .js file under the given folder for obfuscated eval/XOR-decode payloads and hidden files."
+                           Margin="0,4,0,12" TextWrapping="Wrap"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="PathBox" Grid.Column="0" VerticalContentAlignment="Center" Padding="4"
+                             Text="" ToolTip="C:\path\to\resources"/>
+                    <Button Grid.Column="1" Content="Browse..." Padding="10,4" Margin="6,0,0,0" Click="Browse_Click"/>
+                    <Button Grid.Column="2" Content="Open Folder" Padding="10,4" Margin="6,0,0,0" Click="OpenFolder_Click"/>
+                    <Button Grid.Column="3" Content="Scan" Padding="10,4" Margin="6,0,0,0" Click="Scan_Click"/>
+                </Grid>
+
+                <TextBlock x:Name="AlertText" Margin="0,8,0,0" Foreground="Red" TextWrapping="Wrap" Visibility="Collapsed"/>
+
+                <Grid Margin="0,14,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="ResultsSub" Grid.Column="0" Text="Run a scan to see suspicious files" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="Quarantine Selected" Padding="10,4" Click="QuarantineSelected_Click"/>
+                        <Button Content="Delete Selected" Padding="10,4" Margin="6,0,0,0" Click="DeleteSelected_Click"/>
+                    </StackPanel>
+                </Grid>
+
+                <DataGrid x:Name="ResultsGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          HeadersVisibility="Column" SelectionMode="Extended" SelectionUnit="FullRow"
+                          Height="360" IsReadOnly="True">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Open File" Click="CtxOpenFile_Click"/>
+                            <MenuItem Header="Open File Location" Click="CtxOpenFileLocation_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Quarantine" Click="CtxQuarantine_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Delete Permanently" Click="CtxDelete_Click"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="Row_PreviewMouseRightButtonDown"/>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="File" Binding="{Binding RelativePath}" Width="2.5*"/>
+                        <DataGridTextColumn Header="Reason" Binding="{Binding Reasons}" Width="3*"/>
+                        <DataGridTextColumn Header="Hidden" Binding="{Binding Hidden}" Width="Auto"/>
+                        <DataGridTextColumn Header="Score" Binding="{Binding Score}" Width="Auto"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </TabItem>
+
+        <TabItem Header="Quarantine">
+            <StackPanel Margin="10">
+                <TextBlock Text="Quarantine" FontSize="16" FontWeight="Bold"/>
+                <TextBlock Text="Quarantined files are moved into a _quarantine folder under the scanned root, with every move logged."
+                           Margin="0,4,0,12" TextWrapping="Wrap"/>
+                <Button Content="Open Quarantine Folder" Padding="10,4" HorizontalAlignment="Left" Click="OpenQuarantine_Click"/>
+                <TextBlock Text="Quarantine Log" FontWeight="Bold" Margin="0,14,0,4"/>
+                <TextBox x:Name="LogView" Height="300" IsReadOnly="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" FontFamily="Consolas" Padding="4"/>
+            </StackPanel>
+        </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

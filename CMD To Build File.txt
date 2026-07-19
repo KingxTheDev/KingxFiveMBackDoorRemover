@@ -1,0 +1,3 @@
+cd C:\...\BackdoorScanner
+
+dotnet publish -c Release

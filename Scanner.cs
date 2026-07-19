@@ -18,6 +18,13 @@ public static class Scanner
     private static readonly Regex HexEscape = new(@"\\x[0-9A-Fa-f]{2}", RegexOptions.Compiled);
     private static readonly Regex VmRequire = new(@"require\(\s*['""]vm['""]\s*\)", RegexOptions.Compiled);
 
+    // the actual smoking gun: a decoded payload fed straight into eval() as a bare function
+    // call - eval(decodeFn(payload, key)) or eval(decodeFn(payload)). Legitimate code never
+    // writes eval() this way regardless of file size; a real backdoor's payload array can be
+    // arbitrarily large, so this must NOT be gated by file size the way the weak signals are.
+    private static readonly Regex TightEvalOfDecode =
+        new(@"eval\(\s*[A-Za-z_$][\w$]*\(\s*[A-Za-z_$][\w$]*\s*(,\s*[A-Za-z_$][\w$]*\s*)?\)\s*\)", RegexOptions.Compiled);
+
     private static readonly string[] SkipDirs = { "node_modules", ".git" };
 
     public static IEnumerable<ScanResult> Scan(string root, IProgress<int>? progress = null)
@@ -72,40 +79,32 @@ public static class Scanner
             score += 100;
         }
 
-        // the weak/coincidental signals below only mean anything on a small file. The actual
-        // backdoors this tool was built from are tiny single-line decode-and-eval stubs; a large
-        // legitimate bundle (ox_inventory, wasabi, a webpack build.js) can easily contain a long
-        // run of small numbers or hundreds of hex escapes purely from its sheer size, with no
-        // relation to a decode payload. Gating by size keeps those bundles from false-positiving.
-        const int smallFileThreshold = 15_000;
-        if (content.Length <= smallFileThreshold)
+        if (TightEvalOfDecode.IsMatch(content))
         {
-            var hasXorDecode = content.Contains("fromCharCode") && content.Contains('^');
-            if (hasXorDecode)
-            {
-                reasons.Add("XOR decode loop (fromCharCode ^ key)");
-                score += 50;
-            }
+            reasons.Add("eval() of a decode function's return value");
+            score += 100;
+        }
 
-            var hasNumericArray = HasLargeNumericArray(content);
-            if (hasNumericArray)
-            {
-                reasons.Add("large numeric byte array payload");
-                score += 60;
-            }
+        // these are only ever corroborating evidence, never decisive on their own - a large
+        // legitimate bundle (ox_inventory, wasabi, a webpack build.js) can trip one of these by
+        // sheer size alone. Kept low-weight and uncapped by file size so they still add up
+        // correctly on a real backdoor whose payload array happens to be large.
+        if (content.Contains("fromCharCode") && content.Contains('^'))
+        {
+            reasons.Add("XOR decode loop (fromCharCode ^ key)");
+            score += 10;
+        }
 
-            var hasHexEscape = HexEscape.Matches(content).Count > 100;
-            if (hasHexEscape)
-            {
-                reasons.Add("hex-escaped payload string");
-                score += 60;
-            }
+        if (HasLargeNumericArray(content))
+        {
+            reasons.Add("large numeric byte array payload");
+            score += 10;
+        }
 
-            if (content.Contains("eval(") && (hasXorDecode || hasNumericArray || hasHexEscape))
-            {
-                reasons.Add("eval() of decoded payload");
-                score += 20;
-            }
+        if (HexEscape.Matches(content).Count > 100)
+        {
+            reasons.Add("hex-escaped payload string");
+            score += 10;
         }
 
         if (score < 50) return null;

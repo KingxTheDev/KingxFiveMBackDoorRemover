@@ -1,8 +1,6 @@
-# Kingx's FiveM Backdoor Scanner 
+# Backdoor Scanner
 
 A Windows desktop tool that scans a FiveM `resources` folder for obfuscated JavaScript backdoors and quarantines or deletes them. Built by Kingx Development.
-
-Preview: https://r2.fivemanage.com/58qkK59hC79ASv9tEou05/2026-07-1722-54-52.mp4
 
 ## Why
 
@@ -15,8 +13,8 @@ Each `.js` file is scored against a set of signals. A file is flagged once its s
 - **Hidden file** - a `.js` file with the Windows hidden attribute, or a dotfile, is inherently suspicious.
 - **`require('vm')`** - loading Node's `vm` module to execute dynamically decoded code. Practically never appears in legitimate FiveM resource scripts.
 - **`vm.runInThisContext()`** - direct execution of decoded content in the current context.
-- **XOR decode loop** (`String.fromCharCode(...) ^ key`), **large numeric byte-array payloads**, and **heavy hex-escape strings** - classic patterns for smuggling an encoded payload inline. These weaker signals only count on small files (under 15KB), since a large legitimate bundle (a built NUI `index.js`, a webpack `build.js`, etc.) can trip them by sheer size alone without containing anything malicious.
-- **`eval()` of a decoded payload** - an `eval()` call combined with any of the above.
+- **`eval(decodeFn(payload, key))`** - a decoded payload fed straight into `eval()` as a bare function call. This exact shape (`eval(` immediately wrapping a function call with 1-2 plain identifier arguments) is the actual signature of the obfuscated-payload stubs this tool was built from, and it's not something legitimate code writes regardless of file size.
+- **XOR decode loop** (`String.fromCharCode(...) ^ key`), **large numeric byte-array payloads**, and **heavy hex-escape strings** - supporting evidence only. Each is weighted low and none of them can flag a file on its own, since a large legitimate bundle (a built NUI `index.js`, a webpack `build.js`, etc.) can trip one of these by sheer size alone. They only matter stacked alongside one of the signals above.
 
 The scoring is tuned from real backdoor samples found in the wild, not guesswork, but no automated scanner is perfect. Always review a flagged file before deciding to delete it.
 
@@ -62,3 +60,16 @@ Output: `bin/Release/net8.0-windows/win-x64/publish/BackdoorScanner.exe` - a sin
 ## Disclaimer
 
 This tool is provided for defensive security use on servers and files you own or are authorized to inspect. It flags suspicious patterns; it does not guarantee a file is malicious or that a clean scan means a server is safe. Always keep backups before deleting anything.
+
+## Changelog
+
+### 1.1.0
+
+- Added a precise structural check for `eval(decodeFn(payload, key))` - catches backdoor stubs that `eval()` their decoded payload directly instead of going through `vm.runInThisContext()`.
+- Fixed a false-negative from the 1.0 release: the numeric-array/hex-escape signals were gated behind a small-file-size threshold to cut false positives, which also silently disabled detection on real backdoors whose encoded payload array pushed the file over that size. Those signals are now uncapped by size but weighted low enough that none of them can flag a file alone.
+- Added Kingx Development branding and app icon.
+- Added "Open File" and "Open File Location" to the right-click menu.
+
+### 1.0.0
+
+- Initial release: recursive `.js` scan, hidden-file detection, quarantine and delete with confirmation, quarantine log.
